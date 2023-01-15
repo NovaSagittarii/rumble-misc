@@ -175,7 +175,7 @@ class Fighter {
 	process(){
 		if(this.type === "player" || this.type === "bot") this.handleInputs();
 		for(let f of fighters){
-			if(f === this || !f.damage || this.hp <= 0) continue;
+			if(f === this || !f.damage || this.hp <= 0 || f.state === "startup") continue;
 			if(Math.abs(f.x-this.x) < Fighter.HB_WIDTH+f.damageReach && Math.abs(f.y-this.y) < Fighter.HB_HEIGHT){
 				if(f.damage){
 					this.hp -= f.damage; // take damage
@@ -220,7 +220,7 @@ class Fighter {
 			case "crouch_end":    this.yo = 45*(1-this.progress/this.duration)**3; break;
 			case "crouch_idle":   this.yo = 45; break;
 			case "die_loop":      this.yo = 80; 
-				if(true||this.type==="bot") fighters[fighters.indexOf(this)] = new Fighter(this.type, this.actor, 750)
+				if(true||this.type==="bot") this.setup();
 				break;
 			// case "crouch"
 		}
