@@ -38,12 +38,7 @@ def convert(file_path):
 
     # Go through all pixels and turn each 'green' pixel to transparent
 
-    output = {
-        'left': None,
-        'right': None,
-        'top': None,
-        'bottom': None
-    }
+    output = {}
     newfile = name + '-out.png'
     output['file'] = newfile
     skip = False
@@ -61,13 +56,6 @@ def convert(file_path):
                 max_h, max_s, max_v = GREEN_RANGE_MAX_HSV
                 if min_h <= h <= max_h and min_s <= s <= max_s and min_v <= v <= max_v:
                     pix[x, y] = (0, 0, 0, 0)
-                else:
-                    output['left'] = x if output['left'] == None else min(output['left'], x)
-                    output['right'] = x if output['right'] == None else max(output['right'], x)
-                    output['top'] = y if output['top'] == None else min(output['top'], y)
-                    output['bottom'] = y if output['bottom'] == None else max(output['bottom'], y)
-        output['x'] = output['left']
-        output['y'] = output['bottom']
         im.save(newfile)
     return output
 def main():

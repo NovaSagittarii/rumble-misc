@@ -1,5 +1,6 @@
 import subprocess
 import os
+import sys
 
 import tkinter 
 from tkinter import ttk
@@ -123,4 +124,13 @@ def processSprites(folder):
 
 	return ("// END //",)
 
-print(processSprites("nate-fullanphufightsource"))
+def main():
+	# Load image and convert it to RGBA, so it contains alpha channel
+	# print(sys.argv)
+	file_path = sys.argv[1] if len(sys.argv) >= 2 else "nate-fullanphufightsource"
+	print(processSprites(file_path))
+
+if __name__ == '__main__':
+    main()
+
+# https://stackoverflow.com/questions/2810970/how-to-remove-a-green-screen-portrait-background
