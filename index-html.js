@@ -43,7 +43,7 @@ let animation = "idle", animationProgress = 0;
 	b.addEventListener('click', () => {
 		fighters[0].updateState(name);
 	});
-	document.body.append(b);
+	// document.body.append(b);
 });
 
 function preload() {
@@ -156,8 +156,8 @@ class Fighter {
 		let animation = this.state;
 		let next = this.nextState || animations[animation].next;
 		let animationProgress = this.progress + animations[animation].start;
-		text(animation + "->" + next, 0, -150);
-		text(animationProgress-animations[animation].start, 0, -125);
+		// text(animation + "->" + next, 0, -150);
+		// text(animationProgress-animations[animation].start, 0, -125);
 		// animationProgress ++;
 
 
