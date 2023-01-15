@@ -302,7 +302,8 @@ function draw(){
 		translate(width/2, height/2);
 		scale(44 * (1-t)**0.5 + 20);
 		fill(0, t*255 - 2*(frameCount-scoreupdate));
-		text(`${fighters[0].score} - ${fighters[1].score}`, 0, 0);
+		let [x, y] = [fighters[0].score, fighters[1].score];
+		text(((x+y) ? `${x} - ${y}` : "START"), 0, 0);
 		pop();
 		let nt = (t < 1 ? 1 : Math.max(0, (frameCount-scoreupdate+15)/120));
 		translate((Math.random()-0.5)*(1-nt)*20, (Math.random()-0.5)*(1-nt)*20);
