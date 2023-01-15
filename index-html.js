@@ -67,19 +67,37 @@ function preload() {
 	document.body.append(b);
 }
 function setup() {
-	createCanvas(800, 400);
+	createCanvas(900, 400);
 	imageMode(CENTER);
 	textAlign(CENTER, CENTER);
 }
 let keys = [];
 let scoreupdate = 0;
-function keyPressed(){ fighters[0].keys[keyCode] = true; console.log(keyCode);if(keyCode ===32)restart(); }
-function keyReleased(){ fighters[0].keys[keyCode] = false; }
+function keyPressed(){ keys[keyCode] = true; console.log(keyCode);if(keyCode ===32)restart(); updateKeys(); }
+function keyReleased(){ keys[keyCode] = false; updateKeys(); }
+function updateKeys(){
+	Object.entries({
+		"LEFT": 65,
+		"RIGHT": 68,
+		"UP": 87,
+		"DOWN": 83,		// wasd
+		"LIGHT": 70,	// f
+		"SPECIAL": 71,	// g
+	}).forEach(([x,k]) => fighters[0].keys[x] = keys[k]);
+	Object.entries({
+		"LEFT": 37,
+		"RIGHT": 39,
+		"UP": 38,
+		"DOWN": 40,		// arrow keys
+		"LIGHT": 190,	// .
+		"SPECIAL": 191, // /
+	}).forEach(([x,k]) => fighters[1].keys[x] = keys[k]);
+}
 
 let fighters;
 class Fighter {
-	static Left = 0;
-	static Right = 800;
+	static Left = 50;
+	static Right = 850;
 	static Bottom = 200;
 	static GRAVITY = 1;
 	static DRAG = 0.4;
@@ -90,14 +108,13 @@ class Fighter {
 		this.actor = sprite;
 
 		this.setup(x);
-		this.dies = 0;
+		this.score = 0;
 	}
 	setup(x=400){
 		this.x = x;
 		this.y = 0;
 		this.yo = 0;
-		this.flip = false;
-		this.nflip = false;
+		this.flip = this.nflip = this.x > (Fighter.Left+Fighter.Right)/2;
 		this.vx = 0;
 		this.vy = 0;
 		this.state = "startup";
@@ -140,8 +157,8 @@ class Fighter {
 		let animation = this.state;
 		let next = this.nextState || animations[animation].next;
 		let animationProgress = this.progress + animations[animation].start;
-		text(animation + "->" + next, 0, -150);
-		text(animationProgress-animations[animation].start, 0, -125);
+		// text(animation + "->" + next, 0, -150);
+		// text(animationProgress-animations[animation].start, 0, -125);
 		// animationProgress ++;
 
 
@@ -171,10 +188,11 @@ class Fighter {
 						"knockback": 7
 					}[this.state]);
 					this.flip = this.vx > 0;
+
 					if(this.hp <= 0){
 						this.updateState("die_start"); // kys
+						f.score += 1;
 						scoreupdate = frameCount;
-						if(true||this.type==="bot") fighters[fighters.indexOf(this)] = new Fighter(this.type, this.actor, 750)
 					}
 					f.setDamage(0); // accept damage (only one instance)
 				}
@@ -186,13 +204,13 @@ class Fighter {
 		switch(this.state){
 			case "startup": if(!this.floored) this.progress = 0; break;
 			case "idle": break;
-			case "walk_forward":  if(this.keys[68]) this.vx = Math.min( 5, this.vx+(0.6+Fighter.DRAG)); this.flip=this.nflip = false; break;
-			case "walk_backward": if(this.keys[65]) this.vx = Math.max(-5, this.vx-(0.6+Fighter.DRAG)); this.flip=this.nflip = true;  break;
+			case "walk_forward":  if(this.keys["RIGHT"]) this.vx = Math.min( 5, this.vx+(0.6+Fighter.DRAG)); this.flip=this.nflip = false; break;
+			case "walk_backward": if(this.keys["LEFT"]) this.vx = Math.max(-5, this.vx-(0.6+Fighter.DRAG)); this.flip=this.nflip = true;  break;
 			case "jump": if(!this.progress) this.vy = -15;  this.flip = this.nflip; break;
 			case "punch_light":   if(!this.progress) this.setDamage( 5, -10);  break;
 			case "punch_heavier": if(!this.progress) this.setDamage(10);  break;
 			case "combo_one":     if(!this.progress) this.setDamage(12);  
-							      if(this.progress === 50) this.setDamage(20);  break;
+							      if(this.progress === 50) this.setDamage(20, 40);  break;
 			case "kick_spin":     if(this.progress === 20 || this.progress === 40) this.setDamage(32, 20);  break;
 			// case "crouch_kick":
 			case "crouch_start":
@@ -201,7 +219,9 @@ class Fighter {
 			case "crouch_end__kick_included": if(this.progress===30) this.setDamage(50, 50);
 			case "crouch_end":    this.yo = 45*(1-this.progress/this.duration)**3; break;
 			case "crouch_idle":   this.yo = 45; break;
-			case "die_loop":      this.yo = 80; break;
+			case "die_loop":      this.yo = 80; 
+				if(true||this.type==="bot") fighters[fighters.indexOf(this)] = new Fighter(this.type, this.actor, 750)
+				break;
 			// case "crouch"
 		}
 		this.progress ++;
@@ -211,18 +231,15 @@ class Fighter {
 		}
 	}
 	handleInputs(){
-		const F = 70;
-		const G = 71;
-
 		if(this.type === "bot"){
 			const p = fighters[0];
 			const d = Math.abs(this.x-p.x);
 			this.keys = [];
-			if(d < Fighter.HB_WIDTH-10) this.keys[F] = true;
-			else if(d < Fighter.HB_WIDTH+50) this.keys[G] = true;
-			else if(this.x > p.x) this.keys[65] = true;
-			else if(this.x < p.x) this.keys[68] = true;
-			if(p.y < this.y - 10) this.keys[87] = true;
+			if(d < Fighter.HB_WIDTH-10) this.keys["LIGHT"] = true;
+			else if(d < Fighter.HB_WIDTH+20) this.keys["SPECIAL"] = true;
+			else if(this.x > p.x) this.keys["LEFT"] = true;
+			else if(this.x < p.x) this.keys["RIGHT"] = true;
+			if(p.y < this.y - 10) this.keys["UP"] = true;
 			// console.log(this.keys);
 		}
 		
@@ -230,33 +247,33 @@ class Fighter {
 		switch(this.state){
 			case "idle":
 				let floorcheck = this.floored;
-				if(this.keys[65] && floorcheck) this.updateState("walk_backward", true);
-				if(this.keys[68] && floorcheck) this.updateState("walk_forward", true);
-				if(this.keys[87] && floorcheck) this.updateState("jump");
+				if(this.keys["LEFT"] && floorcheck) this.updateState("walk_backward", true);
+				if(this.keys["RIGHT"] && floorcheck) this.updateState("walk_forward", true);
+				if(this.keys["UP"] && floorcheck) this.updateState("jump");
 				attacksAllowed = true;
 				break;
 			case "walk_backward":
-				if(!this.progress && !this.keys[65]) this.updateState("idle");
-				if(this.keys[87]) this.updateState("jump");
+				if(!this.progress && !this.keys["LEFT"]) this.updateState("idle");
+				if(this.keys["UP"]) this.updateState("jump");
 				attacksAllowed = true;
 				break;
 			case "walk_forward":
-				if(!this.progress && !this.keys[68]) this.updateState("idle");
-				if(this.keys[87]) this.updateState("jump");
+				if(!this.progress && !this.keys["RIGHT"]) this.updateState("idle");
+				if(this.keys["UP"]) this.updateState("jump");
 				attacksAllowed = true;
 				break;
 			case "crouch_idle":
-				if(!this.progress && !this.keys[83]) this.updateState("crouch_end");
-				if(!this.progress && this.keys[F]) this.updateState("crouch_end__kick_included");
-				if(this.keys[87]) this.updateState("jump");
+				if(!this.progress && !this.keys["DOWN"]) this.updateState("crouch_end");
+				if(!this.progress && this.keys["LIGHT"]) this.updateState("crouch_end__kick_included");
+				if(this.keys["UP"]) this.updateState("jump");
 				break;
-			case "punch_light":  if(this.keys[F] && this.progress > 10) this.updateState("punch_heavier"); break;
-			case "punch_heavier":if(this.keys[F] && this.progress > 30) this.updateState("combo_one"); break;
+			case "punch_light":  if(this.keys["LIGHT"] && this.progress > 10) this.updateState("punch_heavier"); break;
+			case "punch_heavier":if(this.keys["LIGHT"] && this.progress > 30) this.updateState("combo_one"); break;
 		}
 		if(attacksAllowed){
-			if(this.keys[83]) this.updateState("crouch_start");
-			if(this.keys[F]) this.updateState("punch_light");
-			if(this.keys[G]) this.updateState("kick_spin");
+			if(this.keys["DOWN"]) this.updateState("crouch_start");
+			if(this.keys["LIGHT"]) this.updateState("punch_light");
+			if(this.keys["SPECIAL"]) this.updateState("kick_spin");
 		}
 	}
 	setDamage(x, dr=0){
@@ -273,10 +290,24 @@ class Fighter {
 }
 
 function restart(){
-	fighters = [...new Array(2)].map((_,i,a) => new Fighter(i?"bot":"player", i?"saachin":"nate", 200+(600/(a.length-1))*i))
+	fighters = [...new Array(2)].map((_,i,a) => new Fighter(i?"player":"player", i?"saachin":"nate", 200+(500/(a.length-1))*i))
 }
 restart();
 function draw(){
 	background(200);
+	push();
+	if(frameCount-120 < scoreupdate){
+		let t = Math.min(1, (frameCount-scoreupdate)/30); 
+		push();
+		translate(width/2, height/2);
+		scale(44 * (1-t)**0.5 + 20);
+		fill(0, t*255 - 2*(frameCount-scoreupdate));
+		text(`${fighters[0].score} - ${fighters[1].score}`, 0, 0);
+		pop();
+		let nt = (t < 1 ? 1 : Math.max(0, (frameCount-scoreupdate+15)/120));
+		translate((Math.random()-0.5)*(1-nt)*20, (Math.random()-0.5)*(1-nt)*20);
+	}
+
 	for(const f of fighters) f.draw();
+	pop();
 }
