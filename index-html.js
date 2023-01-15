@@ -41,11 +41,9 @@ let animation = "idle", animationProgress = 0;
 	const b = document.createElement('button');
 	b.innerText = name;
 	b.addEventListener('click', () => {
-		animation = name;
-		// animationProgress = 0;
-		animationProgress = animations[animation].start;
+		fighters[0].updateState(name);
 	});
-	// document.body.append(b);
+	document.body.append(b);
 });
 
 function preload() {
@@ -100,9 +98,10 @@ class Fighter {
 	static Right = 850;
 	static Bottom = 200;
 	static GRAVITY = 1;
+	static JUMP = 15;
 	static DRAG = 0.4;
 	static HB_WIDTH = 150;
-	static HB_HEIGHT = 200;
+	static HB_HEIGHT = 350;
 	constructor(type, sprite, x=400){
 		this.type = type;
 		this.actor = sprite;
@@ -157,8 +156,8 @@ class Fighter {
 		let animation = this.state;
 		let next = this.nextState || animations[animation].next;
 		let animationProgress = this.progress + animations[animation].start;
-		// text(animation + "->" + next, 0, -150);
-		// text(animationProgress-animations[animation].start, 0, -125);
+		text(animation + "->" + next, 0, -150);
+		text(animationProgress-animations[animation].start, 0, -125);
 		// animationProgress ++;
 
 
@@ -178,17 +177,39 @@ class Fighter {
 			if(f === this || !f.damage || this.hp <= 0 || f.state === "startup") continue;
 			if(Math.abs(f.x-this.x) < Fighter.HB_WIDTH+f.damageReach && Math.abs(f.y-this.y) < Fighter.HB_HEIGHT){
 				if(f.damage){
-					this.hp -= f.damage; // take damage
-					if(f.damage < 15) this.updateState("stagger_1"); // staggers
-					else if(f.damage < 30) this.updateState("stagger_2");
-					else this.updateState("knockback");
-					this.vx = ((f.x > this.x) ? -1 : 1) * ({
-						"stagger_1": 3,
-						"stagger_2": 5,
-						"knockback": 7
-					}[this.state]);
-					this.flip = this.vx > 0;
+					if(!this.floored) this.vy = -0.7*Fighter.JUMP;
+					if(this.state.startsWith("crouch")) f.damage /= 5; // guard
+					if(this.state.startsWith("block")){
+						// console.log(this.state, this.progress);
+						if(this.state === "block_start" && this.progress >= 30){
+							this.setDamage(Math.max(15, Math.floor(f.damage*1.2)), 1000);
+							this.updateState("block_end");
+							console.log("block", this.damage);
+							f.process();
+						}else this.updateState("stagger_1");
+						f.damage = 0;
+					}
 
+					this.hp -= f.damage; // take damage
+					if(f.damage < 5) {}
+					else if(f.damage < 15){
+						this.updateState("stagger_1"); // staggers
+						this.vy = -0.2*Fighter.JUMP;
+					} else if(f.damage < 30){
+						this.updateState("stagger_2");
+						this.vy = -0.4*Fighter.JUMP
+					} else {
+						this.updateState("knockback");
+						this.vy = -0.6*Fighter.JUMP
+					}
+					if(f.damage && (this.state.startsWith("stagger") || this.state === "knockback")){
+						this.vx = ((f.x > this.x) ? -1 : 1) * ({
+							"stagger_1": 3,
+							"stagger_2": 5,
+							"knockback": 7
+						}[this.state]);
+						this.flip = this.vx > 0;
+					}
 					if(this.hp <= 0){
 						this.updateState("die_start"); // kys
 						f.score += 1;
@@ -206,18 +227,22 @@ class Fighter {
 			case "idle": break;
 			case "walk_forward":  if(this.keys["RIGHT"]) this.vx = Math.min( 5, this.vx+(0.6+Fighter.DRAG)); this.flip=this.nflip = false; break;
 			case "walk_backward": if(this.keys["LEFT"]) this.vx = Math.max(-5, this.vx-(0.6+Fighter.DRAG)); this.flip=this.nflip = true;  break;
-			case "jump": if(!this.progress) this.vy = -15;  this.flip = this.nflip; break;
+			case "jump": if(!this.progress) this.vy = -Fighter.JUMP;  this.flip = this.nflip; break;
 			case "punch_light":   if(!this.progress) this.setDamage( 5, -10);  break;
 			case "punch_heavier": if(!this.progress) this.setDamage(10);  break;
+			case "kick": 		  if(this.progress === 35) this.setDamage(50, 35);  break;
 			case "combo_one":     if(!this.progress) this.setDamage(12);  
 							      if(this.progress === 50) this.setDamage(20, 40);  break;
-			case "kick_spin":     if(this.progress === 20 || this.progress === 40) this.setDamage(32, 20);  break;
+			case "kick_spin":     if(this.progress === 20 || this.progress === 40) this.setDamage(29, 20);  break;
 			// case "crouch_kick":
 			case "crouch_start":
+			case "block_start":
 			case "knockback": 	  this.yo = 45*(this.progress/this.duration)**0.5; break;
 			case "die_start": 	  this.yo = 80*(this.progress/this.duration)**0.5; break;
 			case "crouch_end__kick_included": if(this.progress===30) this.setDamage(50, 50);
+			case "block_end":
 			case "crouch_end":    this.yo = 45*(1-this.progress/this.duration)**3; break;
+			case "block_hold__alternatively_freeze":
 			case "crouch_idle":   this.yo = 45; break;
 			case "die_loop":      this.yo = 80; 
 				if(true||this.type==="bot") this.setup();
@@ -262,11 +287,15 @@ class Fighter {
 				if(this.keys["UP"]) this.updateState("jump");
 				attacksAllowed = true;
 				break;
+			case "crouch_start": if(this.keys["SPECIAL"]) this.updateState("block_start"); break;
 			case "crouch_idle":
-				if(!this.progress && !this.keys["DOWN"]) this.updateState("crouch_end");
 				if(!this.progress && this.keys["LIGHT"]) this.updateState("crouch_end__kick_included");
+				if(this.keys["SPECIAL"]) this.updateState("block_hold__alternatively_freeze");
+			case "block_hold__alternatively_freeze":
+				if(!this.progress && !this.keys["DOWN"]) this.updateState("crouch_end");
 				if(this.keys["UP"]) this.updateState("jump");
 				break;
+			case "jump": if(this.keys["LIGHT"]) this.updateState("kick"); break;
 			case "punch_light":  if(this.keys["LIGHT"] && this.progress > 10) this.updateState("punch_heavier"); break;
 			case "punch_heavier":if(this.keys["LIGHT"] && this.progress > 30) this.updateState("combo_one"); break;
 		}
