@@ -48,11 +48,12 @@ let animation = "idle", animationProgress = 0;
 
 function preload() {
 	frames = {};
-	frames.nate = [...new Array(Math.min(1000*K, 1770))].map((_,i) => 
+	const folder1 = "nate-fullanphufightsource";  // "menthy-fullanphufight"; // 
+	frames.nate = [...new Array(Math.min(600*K, 1770))].map((_,i) => 
 		i % K == 0 &&
-		loadImage(`./nate-fullanphufightsource/pred_${i.toString().padStart(8,'0')}-out.png`)
+		loadImage(`./${folder1}/pred_${i.toString().padStart(8,'0')}-out.png`)
 	);
-	frames.saachin = [...new Array(Math.min(1000*K, 1770))].map((_,i) => 
+	frames.saachin = [...new Array(Math.min(600*K, 1770))].map((_,i) => 
 		i % K == 0 &&
 		loadImage(`./saachin-fullanphufight/pred_${i.toString().padStart(8,'0')}-out.png`)
 	);
@@ -60,18 +61,27 @@ function preload() {
 	// console.log(frames.length);
 
 	const b = document.createElement('button');
-	b.innerText = "restart";
+	b.innerText = "reset";
 	b.addEventListener('click', restart);
 	document.body.append(b);
+
+	const b2 = document.createElement('button');
+	b2.innerText = "player2->bot";
+	b2.addEventListener('click', () => {
+		fighters[1].type='bot'
+	});
+	document.body.append(b2);
 }
 function setup() {
 	createCanvas(900, 400);
 	imageMode(CENTER);
 	textAlign(CENTER, CENTER);
+
+	restart();
 }
 let keys = [];
 let scoreupdate = 0;
-function keyPressed(){ keys[keyCode] = true; console.log(keyCode);if(keyCode ===32)restart(); updateKeys(); }
+function keyPressed(){ keys[keyCode] = true; console.log(keyCode);if(false&&keyCode ===32)restart(); updateKeys(); }
 function keyReleased(){ keys[keyCode] = false; updateKeys(); }
 function updateKeys(){
 	Object.entries({
@@ -257,7 +267,7 @@ class Fighter {
 	}
 	handleInputs(){
 		if(this.type === "bot"){
-			const p = fighters[0];
+			const p = fighters[this.botTarget || 0];
 			const d = Math.abs(this.x-p.x);
 			this.keys = [];
 			if(d < Fighter.HB_WIDTH-10) this.keys["LIGHT"] = true;
@@ -320,8 +330,8 @@ class Fighter {
 
 function restart(){
 	fighters = [...new Array(2)].map((_,i,a) => new Fighter(i?"player":"player", i?"saachin":"nate", 200+(500/(a.length-1))*i))
+	scoreupdate = frameCount;
 }
-restart();
 function draw(){
 	background(200);
 	push();
