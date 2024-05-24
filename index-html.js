@@ -1,5 +1,5 @@
 let frames;
-const K = 3;
+const K = 6;
 
 const animations = {};
 let animation = "idle", animationProgress = 0;
@@ -137,11 +137,14 @@ class Fighter {
 		this.hpd = this.hp = this.mhp = 200;
 		this.damage = 0;
 		this.damageReach = 0;
+
+		this.frozen = 0;
 	}
 	draw(){
 		this.process();
-		this.x += this.vx;
-		this.y += this.vy;
+		const dt = this.frozen ? Math.min(0, 1 - 0.1*this.frozen/5) : 1;
+		this.x += this.vx * dt;
+		this.y += this.vy * dt;
 		if(this.x > Fighter.Right){
 			this.x = Fighter.Right;
 			this.vx = 0;
@@ -153,8 +156,8 @@ class Fighter {
 		if(this.y > Fighter.Bottom){
 			this.y = Fighter.Bottom;
 			this.vy = 0;
-		}else this.vy += Fighter.GRAVITY;
-		this.vx = this.vx - Math.min(Fighter.DRAG, Math.max(-Fighter.DRAG, this.vx));
+		}else this.vy += Fighter.GRAVITY * dt;
+		this.vx = this.vx - Math.min(Fighter.DRAG, Math.max(-Fighter.DRAG, this.vx)) * dt;
 		this.floored = this.y >= Fighter.Bottom;
 
 
@@ -205,13 +208,20 @@ class Fighter {
 					else if(f.damage < 15){
 						this.updateState("stagger_1"); // staggers
 						this.vy = -0.2*Fighter.JUMP;
+						f.frozen = this.frozen = 5;
 					} else if(f.damage < 30){
 						this.updateState("stagger_2");
-						this.vy = -0.4*Fighter.JUMP
+						this.vy = -0.4*Fighter.JUMP;
+						f.frozen = this.frozen = 10;
 					} else {
 						this.updateState("knockback");
-						this.vy = -0.6*Fighter.JUMP
+						this.vy = -0.6*Fighter.JUMP;
+						f.frozen = this.frozen = 15;
 					}
+					// f.frozen = ~~(f.frozen/2);
+					// this.frozen = f.frozen = 0;
+					this.frozen *= 2;
+					f.frozen *= 2;
 					if(f.damage && (this.state.startsWith("stagger") || this.state === "knockback")){
 						this.vx = ((f.x > this.x) ? -1 : 1) * ({
 							"stagger_1": 3,
@@ -259,13 +269,18 @@ class Fighter {
 				break;
 			// case "crouch"
 		}
-		this.progress ++;
+		if (!this.frozen) this.progress ++;
 		const currentAnimation = animations[this.state];
 		if(this.progress >= currentAnimation.end-currentAnimation.start){
 			this.updateState(this.nextState || currentAnimation.next)
 		}
 	}
 	handleInputs(){
+		if (this.frozen) {
+			this.frozen -= 1;
+			return;
+		}
+
 		if(this.type === "bot"){
 			const p = fighters[this.botTarget || 0];
 			const d = Math.abs(this.x-p.x);
